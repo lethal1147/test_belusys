@@ -69,3 +69,9 @@ export const ADD_STUDENT_TO_CLASSROOM = gql`
     addStudentToClassroom(studentid: $studentid, classroomid: $classroomid)
   }
 `;
+
+export const RemoveStudentFromClassroom = gql`
+  mutation RemoveStudentFromClassroom($studentid: Float!) {
+    removeStudentFromClassroom(studentid: $studentid)
+  }
+`;

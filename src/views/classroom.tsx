@@ -4,12 +4,13 @@ import ClassroomFilter from "@/components/classroom/classroomFilter";
 import CreateClassroomModal from "@/components/classroom/createClassroomModal";
 import { DeleteClassroom } from "@/graphql/classroom/mutate";
 import { QueryGetAllClassroomWithStudent } from "@/graphql/classroom/query";
+import { RemoveStudentFromClassroom } from "@/graphql/student/mutate";
 import { ClassroomWithStudent } from "@/types";
 import { useMutation, useQuery } from "@apollo/client";
 import { Table, TableProps } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
-import { BiPlus } from "react-icons/bi";
+import { BiPlus, BiTrash } from "react-icons/bi";
 import Swal from "sweetalert2";
 
 interface DataType {
@@ -17,25 +18,6 @@ interface DataType {
   fullname: string;
   birthdate: Date;
 }
-
-const columns: TableProps<DataType>["columns"] = [
-  {
-    title: "รหัสนักเรียน",
-    dataIndex: "studentid",
-    key: "studentid",
-  },
-  {
-    title: "ชื่อ",
-    dataIndex: "fullname",
-    key: "fullname",
-  },
-  {
-    title: "วันเกิด",
-    dataIndex: "birthdate",
-    key: "birthdate",
-    render: (date) => dayjs(date).format("YYYY-MM-DD"),
-  },
-];
 
 export default function Classroom() {
   const { loading, data, refetch } = useQuery(QueryGetAllClassroomWithStudent);
@@ -47,6 +29,7 @@ export default function Classroom() {
   );
   const [classroomid, setClassroomid] = useState<number | null>(null);
   const [deleteClassroom] = useMutation(DeleteClassroom);
+  const [removeStudentFromClassroom] = useMutation(RemoveStudentFromClassroom);
   const [filter, setFilter] = useState({
     classroomid: null,
     classname: "",
@@ -60,6 +43,60 @@ export default function Classroom() {
     if (loading) return;
     setCurrentClass(data?.getAllClassroomWithStudent[0]);
   }, [data]);
+
+  const onRemoveFromClassroom = async (studentid: number) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: `ยืนยันที่จะลบนักเรียนเลขที่ '${studentid}' ออกจากห้องเรียน ?`,
+      cancelButtonColor: "#555",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonText: "ยืนยัน",
+      confirmButtonColor: "#d33",
+    });
+    if (result.isConfirmed) {
+      const deletedResult = await removeStudentFromClassroom({
+        variables: { studentid },
+      });
+      if (deletedResult.data?.removeStudentFromClassroom) {
+        await Swal.fire({
+          icon: "success",
+          title: `ลบนักเรียนเลขที่ '${studentid} ออกจากห้องเรียนเรียบร้อย'`,
+          timer: 3000,
+        }).then(() => refetch());
+      }
+    }
+  };
+
+  const columns: TableProps<DataType>["columns"] = [
+    {
+      title: "รหัสนักเรียน",
+      dataIndex: "studentid",
+      key: "studentid",
+    },
+    {
+      title: "ชื่อ",
+      dataIndex: "fullname",
+      key: "fullname",
+    },
+    {
+      title: "วันเกิด",
+      dataIndex: "birthdate",
+      key: "birthdate",
+      render: (date) => dayjs(date).format("YYYY-MM-DD"),
+    },
+    {
+      title: "",
+      dataIndex: "action",
+      key: "action",
+      render: (_, record) => (
+        <BiTrash
+          onClick={() => onRemoveFromClassroom(record.studentid)}
+          className="text-red-500"
+          size={20}
+        />
+      ),
+    },
+  ];
 
   const dataSource = currentClass?.students.map((stud) => ({
     studentid: stud.studentid,
